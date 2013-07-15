@@ -8,11 +8,9 @@ var CWD = '/path/to/the/project',
 
 	TASK_PACKAGE_PATH = '/path/to/the/project/path/to/the/shared/task/package.json',
 	TASK_SUBGRUNTFILE_PATH = '/path/to/the/project/path/to/the/shared/task/subfolder/subGruntfile.js',
-	// TASK_PACKAGE = {
-	// 	keywords: ['gruntsubgrunt'],
-	// 	dependencies: {}
-	// },
-	DEPENDENCY_TASK_PATH = '/path/to/the/project/node_modules/test',
+	DEPENDENCY_REQUESTED = 'test',
+	DEPENDENCY_REQUESTED_PATH = '/path/to/the/project/node_modules/test',
+
 	EXPECTED_DEPENDENCY_TASK_PATH = '/path/to/the/project/node_modules/test/tasks',
 	EXPECTED_PACKAGE_JSON_PATH = '/path/to/the/project/path/to/the/shared/task/subfolder',
 	EXPECTED_TASK_PATH = '/path/to/the/project/path/to/the/shared/task';
@@ -26,8 +24,6 @@ describe('grunt-decorator#decorate', function () {
 			loadNpmTasks: sinon.spy(),
 			loadTasks: sinon.spy(),
 			file: {
-				// exists: sinon.stub(),
-				// readJSON: sinon.stub(),
 				findup: sinon.stub()
 			},
 			fail: {
@@ -42,14 +38,12 @@ describe('grunt-decorator#decorate', function () {
 		loadNpmTasks;
 
 	beforeEach(function() {
-		grunt.loadNpmTasks = sinon.spy()
-		// grunt.file.exists.returns(true)
-		// grunt.file.readJSON.returns(TASK_PACKAGE)
+		grunt.loadNpmTasks.reset()
 	})
 
 	it('should decorate grunt#loadNpmTasks', function () {
 		testObj.decorate(grunt, TASK_SUBGRUNTFILE_PATH)
-
+console.log(grunt.loadNpmTasks)
 		// if it has the remove method, it is our proxy function
 		expect(grunt.loadNpmTasks).to.include.keys('remove')
 		expect(grunt.loadNpmTasks.remove).to.be.instanceOf(Function)
@@ -78,7 +72,7 @@ describe('grunt-decorator#decorate', function () {
 
 			testObj.decorate(grunt, TASK_SUBGRUNTFILE_PATH)
 
-			grunt.loadNpmTasks('test')
+			grunt.loadNpmTasks(DEPENDENCY_REQUESTED)
 
 			expect(grunt.file.findup).to.be.calledWith('package.json', {cwd: EXPECTED_PACKAGE_JSON_PATH, nocase: true})
 		})
@@ -91,7 +85,7 @@ describe('grunt-decorator#decorate', function () {
 
 			it('should fail the build (i.e. something is wrong in the way this library is used)', function() {
 
-				grunt.loadNpmTasks('test')
+				grunt.loadNpmTasks(DEPENDENCY_REQUESTED)
 
 				expect(grunt.fail.fatal)
 					.to.be.calledOnce
@@ -102,25 +96,41 @@ describe('grunt-decorator#decorate', function () {
 		describe('otherwise', function() {
 
 			before(function() {
-				grunt.file.findup.returns(DEPENDENCY_TASK_PATH);
+				grunt.file.findup.returns(DEPENDENCY_REQUESTED_PATH);
 			})
 
-			it('should lookup the required task dependency from the task directory', function() {
+			it('should lookup the required task dependency starting from the task directory', function() {
 				testObj.decorate(grunt, TASK_SUBGRUNTFILE_PATH)
 
-				grunt.loadNpmTasks('test')
+				grunt.loadNpmTasks(DEPENDENCY_REQUESTED)
 
 				expect(grunt.file.findup)
 					.to.be.calledWith(
-						'node_modules/test',
+						'node_modules/' + DEPENDENCY_REQUESTED,
 						{cwd: EXPECTED_TASK_PATH, nocase: true}
 					)
 			})
 
 			it('should load tasks inside that package', function() {
-				grunt.loadNpmTasks('test')
+				grunt.loadNpmTasks(DEPENDENCY_REQUESTED)
 
 				expect(grunt.loadTasks).to.be.calledWith(EXPECTED_DEPENDENCY_TASK_PATH)
+			})
+
+			describe('if the dependency is NOT resolved', function() {
+
+				before(function() {
+					grunt.file.findup.returns(null)
+				})
+
+				it('should fail the build', function() {
+
+					grunt.loadNpmTasks(DEPENDENCY_REQUESTED)
+
+					expect(grunt.fail.fatal)
+						.to.be.calledOnce
+						.and.to.be.calledWith(sinon.match.string)
+				})
 			})
 		})
 	})
