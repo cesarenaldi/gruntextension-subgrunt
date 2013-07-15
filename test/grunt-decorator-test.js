@@ -5,13 +5,17 @@ var expect = require('chai').expect,
 	path = require('path');
 
 var CWD = '/path/to/the/project',
+
 	TASK_PACKAGE_PATH = '/path/to/the/project/path/to/the/shared/task/package.json',
 	TASK_SUBGRUNTFILE_PATH = '/path/to/the/project/path/to/the/shared/task/subfolder/subGruntfile.js',
-	TASK_PACKAGE = {
-		keywords: ['gruntsubgrunt'],
-		dependencies: {}
-	},
-	EXPECTED_CWD_FOR_FINDUP = '/path/to/the/project/path/to/the/shared/task/subfolder';
+	// TASK_PACKAGE = {
+	// 	keywords: ['gruntsubgrunt'],
+	// 	dependencies: {}
+	// },
+	DEPENDENCY_TASK_PATH = '/path/to/the/project/node_modules/test',
+	EXPECTED_DEPENDENCY_TASK_PATH = '/path/to/the/project/node_modules/test/tasks',
+	EXPECTED_PACKAGE_JSON_PATH = '/path/to/the/project/path/to/the/shared/task/subfolder',
+	EXPECTED_TASK_PATH = '/path/to/the/project/path/to/the/shared/task';
 
 describe('grunt-decorator#decorate', function () {
 
@@ -22,9 +26,12 @@ describe('grunt-decorator#decorate', function () {
 			loadNpmTasks: sinon.spy(),
 			loadTasks: sinon.spy(),
 			file: {
-				exists: sinon.stub(),
-				readJSON: sinon.stub(),
+				// exists: sinon.stub(),
+				// readJSON: sinon.stub(),
 				findup: sinon.stub()
+			},
+			fail: {
+				fatal: sinon.spy()
 			}
 		},
 		requireStub = function(name) {
@@ -36,8 +43,8 @@ describe('grunt-decorator#decorate', function () {
 
 	beforeEach(function() {
 		grunt.loadNpmTasks = sinon.spy()
-		grunt.file.exists.returns(true)
-		grunt.file.readJSON.returns(TASK_PACKAGE)
+		// grunt.file.exists.returns(true)
+		// grunt.file.readJSON.returns(TASK_PACKAGE)
 	})
 
 	it('should decorate grunt#loadNpmTasks', function () {
@@ -58,40 +65,62 @@ describe('grunt-decorator#decorate', function () {
 		expect(grunt.loadNpmTasks).to.be.equal(ref)
 	})
 
-	describe('when calling grunt#loadNpmTasks after decoration', function() {
+	describe('then the decorated grunt#loadNpmTasks', function() {
 
 		before(function() {
-			
+
 			grunt.file.findup
-				.withArgs('package.json', {cwd: EXPECTED_CWD_FOR_FINDUP, nocase: true})
+				.withArgs('package.json', {cwd: EXPECTED_PACKAGE_JSON_PATH, nocase: true})
 				.returns(TASK_PACKAGE_PATH)
 		})
 
-		it('should load the task package.json file (i.e. the closest package.json file to the sub Gruntfile)', function() {
-			var vm = require('vm');
+		it('should find the task package.json file (i.e. the closest package.json file to the sub Gruntfile)', function() {
 
-			vm.runInNewContext('testObj.decorate(grunt, TASK_SUBGRUNTFILE_PATH);', {
-				testObj: testObj,
-				grunt: grunt,
-				TASK_SUBGRUNTFILE_PATH: TASK_SUBGRUNTFILE_PATH
-			});
+			testObj.decorate(grunt, TASK_SUBGRUNTFILE_PATH)
 
 			grunt.loadNpmTasks('test')
 
-			expect(grunt.file.findup).to.be.calledWith('package.json', {cwd: EXPECTED_CWD_FOR_FINDUP, nocase: true})
-			expect(grunt.file.exists).to.be.calledWith(path.join(WORKING_DIR, 'package.json'))
+			expect(grunt.file.findup).to.be.calledWith('package.json', {cwd: EXPECTED_PACKAGE_JSON_PATH, nocase: true})
 		})
 
-		describe('and if it is available', function() {
+		describe('if the closest package.json file is not inside a sub-folder of the current working directory', function() {
 
 			before(function() {
-				grunt.file.findup
-					.withArgs('package.json', {cwd: EXPECTED_CWD_FOR_FINDUP, nocase: true})
-					.returns(TASK_PACKAGE_PATH)
+				grunt.file.findup.returns(TASK_PACKAGE_PATH)
 			})
 
-			it('should lookup for dependencies', function() {
-				expect(false).to.be.ok
+			it('should fail the build (i.e. something is wrong in the way this library is used)', function() {
+
+				grunt.loadNpmTasks('test')
+
+				expect(grunt.fail.fatal)
+					.to.be.calledOnce
+					.and.to.be.calledWith(sinon.match.string)
+			})
+		})
+
+		describe('otherwise', function() {
+
+			before(function() {
+				grunt.file.findup.returns(DEPENDENCY_TASK_PATH);
+			})
+
+			it('should lookup the required task dependency from the task directory', function() {
+				testObj.decorate(grunt, TASK_SUBGRUNTFILE_PATH)
+
+				grunt.loadNpmTasks('test')
+
+				expect(grunt.file.findup)
+					.to.be.calledWith(
+						'node_modules/test',
+						{cwd: EXPECTED_TASK_PATH, nocase: true}
+					)
+			})
+
+			it('should load tasks inside that package', function() {
+				grunt.loadNpmTasks('test')
+
+				expect(grunt.loadTasks).to.be.calledWith(EXPECTED_DEPENDENCY_TASK_PATH)
 			})
 		})
 	})
