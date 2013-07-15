@@ -43,7 +43,7 @@ describe('grunt-decorator#decorate', function () {
 
 	it('should decorate grunt#loadNpmTasks', function () {
 		testObj.decorate(grunt, TASK_SUBGRUNTFILE_PATH)
-console.log(grunt.loadNpmTasks)
+
 		// if it has the remove method, it is our proxy function
 		expect(grunt.loadNpmTasks).to.include.keys('remove')
 		expect(grunt.loadNpmTasks.remove).to.be.instanceOf(Function)
