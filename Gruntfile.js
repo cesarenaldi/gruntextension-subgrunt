@@ -34,18 +34,18 @@ module.exports = function(grunt) {
 			},
 			lib: {
 				files: '<%= jshint.lib.src %>',
-				tasks: ['jshint:lib', 'nodeunit']
+				tasks: ['jshint:lib', 'mochaTest:unit']
 			},
 			test: {
 				files: '<%= jshint.test.src %>',
-				tasks: ['jshint:test', 'nodeunit']
+				tasks: ['jshint:test', 'mochaTest:unit']
 			},
 		},
 		mochaTest: {
 			options: {
 				reporter: 'spec'
 			},
-			test: {
+			unit: {
 				src: [
 					'test/{,**/}*-test.js'
 				]
@@ -77,7 +77,7 @@ module.exports = function(grunt) {
 	})
 
 	// Default task.
-	grunt.registerTask('test', ['mochaTest'])
+	grunt.registerTask('test', [/*'jshint',*/ 'mochaTest'])
 	grunt.registerTask('default', ['test'])
 
 };
