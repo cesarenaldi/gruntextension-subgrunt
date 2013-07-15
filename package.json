@@ -1,0 +1,45 @@
+{
+  "name": "gruntextension-subgrunt",
+  "description": "Allow you to run a fusub grunt build process using your custom Gruntfile configuration. Useful to define complex sub tasks using all the simplicity of grunt, keeping your tasks dependencies hidden in your tasks.",
+  "version": "0.1.0",
+  "homepage": "https://github.com/cesarenaldi/gruntextension-subgrunt",
+  "author": {
+    "name": "Cesare Naldi",
+    "email": "naldi.cesare@gmail.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/cesarenaldi/gruntextension-subgrunt.git"
+  },
+  "bugs": {
+    "url": "https://github.com/cesarenaldi/gruntextension-subgrunt/issues"
+  },
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "https://github.com/cesarenaldi/gruntextension-subgrunt/blob/master/LICENSE-MIT"
+    }
+  ],
+  "main": "lib/gruntextension-subgrunt",
+  "engines": {
+    "node": ">= 0.8.0"
+  },
+  "scripts": {
+    "test": "grunt test"
+  },
+  "devDependencies": {
+    "grunt-contrib-jshint": "~0.6.0",
+    "grunt-contrib-nodeunit": "~0.2.0",
+    "grunt-contrib-watch": "~0.4.0",
+    "grunt": "~0.4.1",
+    "chai": "~1.7.2",
+    "grunt-mocha-test": "~0.5.0",
+    "sinon": "~1.7.3",
+    "sinon-chai": "~2.4.0",
+    "injectr": "~0.4.0"
+  },
+  "keywords": [],
+  "dependencies": {
+    "meld": "~1.3.0"
+  }
+}
