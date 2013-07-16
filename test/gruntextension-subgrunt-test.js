@@ -48,7 +48,7 @@ describe('gruntextension-subgrunt#run', function () {
 		};
 	})
 
-	it('should retrieve parameters from the given task', function () {
+	it('should retrieve parameters from the current task', function () {
 		testObj.run(grunt, GRUNTFILE, done);
 
 		expect(task.options).to.be.calledOnce;

@@ -6,43 +6,38 @@ var expect = require('chai').expect,
 
 var CWD = '/path/to/the/project',
 
-	TASK_PACKAGE_PATH = '/path/to/the/project/path/to/the/shared/task/package.json',
-	TASK_SUBGRUNTFILE_PATH = '/path/to/the/project/path/to/the/shared/task/subfolder/subGruntfile.js',
+	SHARED_TASK_SUBGRUNTFILE_PATH = '/path/to/the/project/path/to/the/shared/task/subfolder/subGruntfile.js',
+	SHARED_TASK_PACKAGE_PATH = '/path/to/the/project/path/to/the/shared/task/package.json',
+	
 	DEPENDENCY_REQUESTED = 'test',
 	DEPENDENCY_REQUESTED_PATH = '/path/to/the/project/node_modules/test',
-
-	EXPECTED_DEPENDENCY_TASK_PATH = '/path/to/the/project/node_modules/test/tasks',
-	EXPECTED_PACKAGE_JSON_PATH = '/path/to/the/project/path/to/the/shared/task/subfolder',
-	EXPECTED_TASK_PATH = '/path/to/the/project/path/to/the/shared/task';
+	
+	EXPECTED_SHARED_TASK_SUBGRUNT_DIR = '/path/to/the/project/path/to/the/shared/task/subfolder',
+	EXPECTED_PATH_FOR_DEPENDENCY_FINDUP = '/path/to/the/project/path/to/the/shared/task',
+	EXPECTED_DEPENDENCY_PATH = '/path/to/the/project/node_modules/test/tasks',
+	EXPECTED_SHARED_TASK_PACKAGE_DIR = '/path/to/the/project/path/to/the/shared/task';
 
 describe('grunt-decorator#decorate', function () {
 
 	var process = {
-			cwd: sinon.stub().returns(CWD)
+			cwd: sinon.stub()
 		},
+		loadNpmTasksSpy = sinon.spy(),
 		grunt = {
-			loadNpmTasks: sinon.spy(),
+			loadNpmTasks: loadNpmTasksSpy,
 			loadTasks: sinon.spy(),
 			file: {
-				findup: sinon.stub()
+				findup: sinon.stub(),
+				isPathInCwd: sinon.stub()
 			},
 			fail: {
 				fatal: sinon.spy()
 			}
 		},
-		requireStub = function(name) {
-			return require(name)
-		},
-		testObj = require('../lib/grunt-decorator.js'),
-
-		loadNpmTasks;
-
-	beforeEach(function() {
-		grunt.loadNpmTasks.reset()
-	})
+		testObj = require('../lib/grunt-decorator.js');
 
 	it('should decorate grunt#loadNpmTasks', function () {
-		testObj.decorate(grunt, TASK_SUBGRUNTFILE_PATH)
+		grunt = testObj.decorate(grunt, SHARED_TASK_SUBGRUNTFILE_PATH)
 
 		// if it has the remove method, it is our proxy function
 		expect(grunt.loadNpmTasks).to.include.keys('remove')
@@ -50,40 +45,64 @@ describe('grunt-decorator#decorate', function () {
 	})
 
 	it('should avoid to decorate grunt#loadNpmTasks again when called a second time', function() {
-		var ref;
-		testObj.decorate(grunt, TASK_SUBGRUNTFILE_PATH)
-		ref = grunt.loadNpmTasks;
+		var ref = grunt.loadNpmTasks;
 
-		testObj.decorate(grunt)
+		grunt = testObj.decorate(grunt, SHARED_TASK_SUBGRUNTFILE_PATH)
 
 		expect(grunt.loadNpmTasks).to.be.equal(ref)
 	})
 
-	describe('then the decorated grunt#loadNpmTasks', function() {
+	describe('the decorated grunt#loadNpmTasks', function() {
 
 		before(function() {
 
+			process.cwd.returns(CWD)
+
 			grunt.file.findup
-				.withArgs('package.json', {cwd: EXPECTED_PACKAGE_JSON_PATH, nocase: true})
-				.returns(TASK_PACKAGE_PATH)
+				.withArgs('package.json', {
+					cwd: EXPECTED_SHARED_TASK_SUBGRUNT_DIR,
+					nocase: true
+				})
+				.returns(SHARED_TASK_PACKAGE_PATH)
+			grunt.file.findup
+				.withArgs('node_modules/' + DEPENDENCY_REQUESTED, {
+					cwd: EXPECTED_SHARED_TASK_PACKAGE_DIR,
+					nocase: true
+				})
+				.returns(DEPENDENCY_REQUESTED_PATH)
+			grunt.file.isPathInCwd
+				.withArgs(EXPECTED_SHARED_TASK_PACKAGE_DIR)
+				.returns(true)
 		})
 
-		it('should find the task package.json file (i.e. the closest package.json file to the sub Gruntfile)', function() {
+		it('should load the required dependency using the shared task dependencies', function() {
 
-			testObj.decorate(grunt, TASK_SUBGRUNTFILE_PATH)
-
+			// (i.e. the dependencie defined in the closest package.json file to the sub-gruntfile)
+			
 			grunt.loadNpmTasks(DEPENDENCY_REQUESTED)
-
-			expect(grunt.file.findup).to.be.calledWith('package.json', {cwd: EXPECTED_PACKAGE_JSON_PATH, nocase: true})
+			
+			expect(grunt.file.findup)
+				.to.be.calledWith(
+					'package.json', 
+					{cwd: EXPECTED_SHARED_TASK_SUBGRUNT_DIR, nocase: true}
+				)
+			expect(grunt.file.findup)
+				.to.be.calledWith(
+					'node_modules/' + DEPENDENCY_REQUESTED,
+					{cwd: EXPECTED_SHARED_TASK_PACKAGE_DIR, nocase: true}
+				)
+			expect(grunt.loadTasks)
+				.to.be.calledWith(EXPECTED_DEPENDENCY_PATH)
 		})
 
-		describe('if the closest package.json file is not inside a sub-folder of the current working directory', function() {
+		describe('if the closest package root to the sub-gruntfile is outside the current working directory', function() {
 
-			before(function() {
-				grunt.file.findup.returns(TASK_PACKAGE_PATH)
+			beforeEach(function() {
+				grunt.fail.fatal.reset()
+				grunt.file.isPathInCwd = sinon.stub().returns(false)
 			})
 
-			it('should fail the build (i.e. something is wrong in the way this library is used)', function() {
+			it('should fail the build because something is wrong in the way this library is used', function() {
 
 				grunt.loadNpmTasks(DEPENDENCY_REQUESTED)
 
@@ -93,44 +112,23 @@ describe('grunt-decorator#decorate', function () {
 			})
 		})
 
-		describe('otherwise', function() {
+		describe('if the requested grunt module is not available', function() {
 
 			before(function() {
-				grunt.file.findup.returns(DEPENDENCY_REQUESTED_PATH);
+				grunt.fail.fatal.reset()
+				grunt.file.isPathInCwd = sinon.stub().returns(true)
+				grunt.file.findup = sinon.stub()
+					.withArgs('node_modules/' + DEPENDENCY_REQUESTED, sinon.match.any)
+					.returns(null)
 			})
 
-			it('should lookup the required task dependency starting from the task directory', function() {
-				testObj.decorate(grunt, TASK_SUBGRUNTFILE_PATH)
+			it('should fail the build', function() {
 
 				grunt.loadNpmTasks(DEPENDENCY_REQUESTED)
 
-				expect(grunt.file.findup)
-					.to.be.calledWith(
-						'node_modules/' + DEPENDENCY_REQUESTED,
-						{cwd: EXPECTED_TASK_PATH, nocase: true}
-					)
-			})
-
-			it('should load tasks inside that package', function() {
-				grunt.loadNpmTasks(DEPENDENCY_REQUESTED)
-
-				expect(grunt.loadTasks).to.be.calledWith(EXPECTED_DEPENDENCY_TASK_PATH)
-			})
-
-			describe('if the dependency is NOT resolved', function() {
-
-				before(function() {
-					grunt.file.findup.returns(null)
-				})
-
-				it('should fail the build', function() {
-
-					grunt.loadNpmTasks(DEPENDENCY_REQUESTED)
-
-					expect(grunt.fail.fatal)
-						.to.be.calledOnce
-						.and.to.be.calledWith(sinon.match.string)
-				})
+				expect(grunt.fail.fatal)
+					.to.be.calledOnce
+					.and.to.be.calledWith(sinon.match.string)
 			})
 		})
 	})
