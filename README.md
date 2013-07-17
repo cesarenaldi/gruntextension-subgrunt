@@ -1,6 +1,6 @@
 # gruntextension-subgrunt [![Build Status](https://secure.travis-ci.org/cesarenaldi/gruntextension-subgrunt.png?branch=master)](http://travis-ci.org/cesarenaldi/gruntextension-subgrunt)
 
-Allow you to run a sub grunt build process using your custom Gruntfile configuration. Useful to define complex sub tasks using all the simplicity of grunt, keeping your tasks dependencies hidden in your tasks.
+Allow you to run a sub grunt build process using your custom Gruntfile configuration. Useful to define complex sub tasks using all the simplicity of grunt and keeping your task dependencies hidden in your task package.
 
 ## Getting Started
 Install the module with: `npm install gruntextension-subgrunt`

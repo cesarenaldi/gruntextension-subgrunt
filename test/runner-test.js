@@ -77,7 +77,7 @@ describe('runner', function () {
 		runner(grunt);
 
 		expect(decorator.decorate)
-			.to.be.calledWith(sinon.match.same(grunt))
+			.to.be.calledWith(grunt, GRUNTFILE_PATH)
 			.and.to.be.calledBefore(subgruntModule)
 	})
 
