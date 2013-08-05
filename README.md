@@ -80,7 +80,7 @@ module.exports = function(grunt) {
     'yourtaskname', 
     'Your awesome shared build process.',
     function () {
-      subgrunt.run(grunt, path.join(__dirname, 'path/to/your/shared/Gruntfile.js'));
+      subgrunt.run(path.join(__dirname, 'path/to/your/shared/Gruntfile.js'));
     }
   )
 };
