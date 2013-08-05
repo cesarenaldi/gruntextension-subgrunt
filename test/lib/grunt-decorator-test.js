@@ -2,7 +2,8 @@
 
 var expect = require('chai').expect,
 	sinon = require('sinon'),
-	path = require('path');
+	path = require('path'),
+	injectr = require('injectr');
 
 var CWD = '/path/to/the/project',
 
@@ -27,17 +28,33 @@ describe('grunt-decorator#decorate', function () {
 			loadNpmTasks: loadNpmTasksSpy,
 			loadTasks: sinon.spy(),
 			file: {
-				findup: sinon.stub(),
-				isPathInCwd: sinon.stub()
+				findup: sinon.stub()
 			},
 			fail: {
 				fatal: sinon.spy()
 			}
 		},
-		testObj = require('../lib/grunt-decorator.js');
+
+		testObj = injectr('lib/grunt-decorator.js', {
+			path: path,
+			meld: require('meld')
+		}, {
+			process: process,
+			console: console
+		});
+
+	before(function() {
+		process.cwd.returns(CWD)
+		grunt.file.findup
+			.withArgs('node_modules/' + DEPENDENCY_REQUESTED, {
+				cwd: EXPECTED_SHARED_TASK_PACKAGE_DIR,
+				nocase: true
+			})
+			.returns(DEPENDENCY_REQUESTED_PATH)
+	})
 
 	it('should decorate grunt#loadNpmTasks', function () {
-		grunt = testObj.decorate(grunt, SHARED_TASK_SUBGRUNTFILE_PATH)
+		grunt = testObj.decorate(grunt, EXPECTED_SHARED_TASK_PACKAGE_DIR)
 
 		// if it has the remove method, it is our proxy function
 		expect(grunt.loadNpmTasks).to.include.keys('remove')
@@ -47,33 +64,12 @@ describe('grunt-decorator#decorate', function () {
 	it('should avoid to decorate grunt#loadNpmTasks again when called a second time', function() {
 		var ref = grunt.loadNpmTasks;
 
-		grunt = testObj.decorate(grunt, SHARED_TASK_SUBGRUNTFILE_PATH)
+		grunt = testObj.decorate(grunt, EXPECTED_SHARED_TASK_PACKAGE_DIR)
 
 		expect(grunt.loadNpmTasks).to.be.equal(ref)
 	})
 
 	describe('the decorated grunt#loadNpmTasks', function() {
-
-		before(function() {
-
-			process.cwd.returns(CWD)
-
-			grunt.file.findup
-				.withArgs('package.json', {
-					cwd: EXPECTED_SHARED_TASK_SUBGRUNT_DIR,
-					nocase: true
-				})
-				.returns(SHARED_TASK_PACKAGE_PATH)
-			grunt.file.findup
-				.withArgs('node_modules/' + DEPENDENCY_REQUESTED, {
-					cwd: EXPECTED_SHARED_TASK_PACKAGE_DIR,
-					nocase: true
-				})
-				.returns(DEPENDENCY_REQUESTED_PATH)
-			grunt.file.isPathInCwd
-				.withArgs(EXPECTED_SHARED_TASK_PACKAGE_DIR)
-				.returns(true)
-		})
 
 		it('should load the required dependency using the shared task dependencies', function() {
 
@@ -83,11 +79,6 @@ describe('grunt-decorator#decorate', function () {
 			
 			expect(grunt.file.findup)
 				.to.be.calledWith(
-					'package.json', 
-					{cwd: EXPECTED_SHARED_TASK_SUBGRUNT_DIR, nocase: true}
-				)
-			expect(grunt.file.findup)
-				.to.be.calledWith(
 					'node_modules/' + DEPENDENCY_REQUESTED,
 					{cwd: EXPECTED_SHARED_TASK_PACKAGE_DIR, nocase: true}
 				)
@@ -95,28 +86,10 @@ describe('grunt-decorator#decorate', function () {
 				.to.be.calledWith(EXPECTED_DEPENDENCY_PATH)
 		})
 
-		describe('if the closest package root to the sub-gruntfile is outside the current working directory', function() {
-
-			beforeEach(function() {
-				grunt.fail.fatal.reset()
-				grunt.file.isPathInCwd = sinon.stub().returns(false)
-			})
-
-			it('should fail the build because something is wrong in the way this library is used', function() {
-
-				grunt.loadNpmTasks(DEPENDENCY_REQUESTED)
-
-				expect(grunt.fail.fatal)
-					.to.be.calledOnce
-					.and.to.be.calledWith(sinon.match.string)
-			})
-		})
-
 		describe('if the requested grunt module is not available', function() {
 
 			before(function() {
 				grunt.fail.fatal.reset()
-				grunt.file.isPathInCwd = sinon.stub().returns(true)
 				grunt.file.findup = sinon.stub()
 					.withArgs('node_modules/' + DEPENDENCY_REQUESTED, sinon.match.any)
 					.returns(null)

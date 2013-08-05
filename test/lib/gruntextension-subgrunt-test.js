@@ -43,6 +43,9 @@ describe('gruntextension-subgrunt#run', function () {
 			},
 			task: {
 				current: task
+			},
+			verbose: {
+				writeln: function() {}
 			}
 		},
 
@@ -55,7 +58,8 @@ describe('gruntextension-subgrunt#run', function () {
 		done = sinon.spy(),
 
 		testObj = injectr('lib/gruntextension-subgrunt.js', {
-			path: require('path')
+			path: require('path'),
+			grunt: grunt
 		}, {
 			process: process,
 			__dirname: MODULE_DIRNAME,
@@ -70,13 +74,13 @@ describe('gruntextension-subgrunt#run', function () {
 	})
 
 	it('should retrieve parameters from the current task', function () {
-		testObj.run(grunt, GRUNTFILE, done);
+		testObj.run(GRUNTFILE, done);
 
 		expect(task.options).to.be.calledOnce;
 	})
 
 	it('should pass parameters and "done" callback into grunt.util.spawn', function() {
-		testObj.run(grunt, GRUNTFILE, done);
+		testObj.run(GRUNTFILE, done);
 
 		expect(grunt.util.spawn).to.be.calledWith(
 			sinon.match(EXPECTED_SPAWN_PARAMS),
@@ -85,19 +89,19 @@ describe('gruntextension-subgrunt#run', function () {
 	})
 
 	it('should call the "done" callback as soon as the child process exits', function() {
-		testObj.run(grunt, GRUNTFILE, done);
+		testObj.run(GRUNTFILE, done);
 
 		expect(done).to.be.calledOnce
 	})
 
 	it('should use grunt to create child grunt process', function() {
-		testObj.run(grunt, GRUNTFILE, done);
+		testObj.run(GRUNTFILE, done);
 		
 		expect(grunt.util.spawn).to.be.calledOnce;
 	})
 
 	it('should connect stdout and stderr streams of the child process to the main process streams', function() {
-		testObj.run(grunt, GRUNTFILE, done);
+		testObj.run(GRUNTFILE, done);
 
 		expect(childProcess.stdout.pipe).to.be.calledOnce;
 		expect(childProcess.stderr.pipe).to.be.calledOnce;

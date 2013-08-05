@@ -13,6 +13,7 @@ module.exports = function(grunt) {
 		nodeunit: {
 			files: ['test/**/*_test.js'],
 		},
+		clean: ['.tmp'],
 		jshint: {
 			options: {
 				jshintrc: '.jshintrc'
@@ -38,7 +39,7 @@ module.exports = function(grunt) {
 			},
 			test: {
 				files: '<%= jshint.test.src %>',
-				tasks: ['jshint:test', 'mochaTest:unit']
+				tasks: ['mochaTest:unit']
 			},
 		},
 		mochaTest: {
@@ -48,6 +49,11 @@ module.exports = function(grunt) {
 			unit: {
 				src: [
 					'test/{,**/}*-test.js'
+				]
+			},
+			integration: {
+				src:[
+					'test/integration.js'
 				]
 			}
 		},
@@ -68,16 +74,16 @@ module.exports = function(grunt) {
 	grunt.loadNpmTasks('grunt-mocha-test')
 	grunt.loadNpmTasks('grunt-contrib-jshint')
 	grunt.loadNpmTasks('grunt-contrib-watch')
+	grunt.loadNpmTasks('grunt-contrib-clean')
 
 
 	grunt.registerMultiTask('testme', 'description', function() {
-		var subgrunt = require('./lib/gruntextension-subgrunt')
-		subgrunt.run(grunt, path.join(__dirname, 'test/fixtures/subGruntfile.js'), this.async())
-
+		var subgrunt = require('./lib/gruntextension-subgrunt');
+		subgrunt.run(path.join(__dirname, 'test/fixtures/subGruntfile.js'), this.async())
 	})
 
 	// Default task.
-	grunt.registerTask('test', [/*'jshint',*/ 'mochaTest'])
+	grunt.registerTask('test', ['clean', /*'jshint',*/ 'mochaTest:unit', 'testme', 'mochaTest:integration'])
 	grunt.registerTask('default', ['test'])
 
 };
