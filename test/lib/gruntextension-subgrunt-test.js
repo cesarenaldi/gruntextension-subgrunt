@@ -14,6 +14,8 @@ var GRUNTFILE = 'path/to/sub-gruntfile.js',
 			'path/to/shared/task/node_modules/gruntextension-subgrunt/lib/runner.js',
 			'--base',
 			'/path/to/project',
+            '--target',
+            'test',
 			'--subgrunt=path/to/sub-gruntfile.js',
 			'--params={"options":{"prop1":"value"},"filesSrc":[],"args":[]}'
 		]
@@ -34,7 +36,8 @@ describe('gruntextension-subgrunt#run', function () {
 			options: sinon.stub().returns({
 				prop1: 'value'
 			}),
-			async: sinon.spy()
+			async: sinon.spy(),
+            target: 'test'
 		},
 
 		grunt = {
@@ -106,4 +109,10 @@ describe('gruntextension-subgrunt#run', function () {
 		expect(childProcess.stdout.pipe).to.be.calledOnce;
 		expect(childProcess.stderr.pipe).to.be.calledOnce;
 	})
+
+    it('should return target property from parent task', function(){
+        testObj.run(GRUNTFILE, done);
+
+        expect(task.target).to.equal('test');
+    })
 })
